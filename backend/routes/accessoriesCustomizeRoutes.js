@@ -1,22 +1,30 @@
 const express = require("express");
 const multer = require("multer");
+const path = require("path");
 const router = express.Router();
 const customizeAccessoriesController = require("../controllers/customizeAccessoriesController");
 
-// Multer configuration for image uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, "uploads/");
+        cb(null, "uploads/");  // Make sure the folder exists
     },
     filename: (req, file, cb) => {
         cb(null, `${Date.now()}-${file.originalname}`);
-    },
+    }
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
-// Routes
-router.post("/", upload.array("images"), customizeAccessoriesController.createCustomizeAccessory);
+
+router.post(
+    "/",
+    upload.fields([
+        { name: "files", maxCount: 10 },
+        { name: "slide_images", maxCount: 10 }
+    ]),
+    customizeAccessoriesController.createCustomizeAccessory
+);
+
 router.get("/", customizeAccessoriesController.getCustomizeAccessories);
 router.get("/:id", customizeAccessoriesController.getCustomizeAccessoryById);
 router.put("/:id", customizeAccessoriesController.updateCustomizeAccessory);

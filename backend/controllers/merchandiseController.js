@@ -6,12 +6,11 @@ exports.merchandiseCustomize = (req, res) => {
 
     const { name, description, category, price, quantity } = req.body;
     
-    // Store images with original extensions
     const images = req.files?.map((file) => {
-        const ext = path.extname(file.originalname);  // Get the extension (.jpg, .png)
-        const filename = `${file.filename}${ext}`;   // Add extension to filename
-        return filename;
+        const filename = path.parse(file.originalname).name;  // Extracts the filename without extension
+        return `${file.filename}`;  // Store only the unique filename (without extension)
     }) || [];
+    
 
     // Handle variants
     let variants;
@@ -87,7 +86,34 @@ exports.getMerchandise = (req, res) => {
             console.error("Database Error:", err);
             return res.status(500).json({ error: "Database error" });
         }
-        res.json(results);
+
+        // Transforming results to merge variants by product ID
+        const merged = results.reduce((acc, row) => {
+            const { id, name, description, category, price, quantity, color, sizes, image } = row;
+
+            if (!acc[id]) {
+                acc[id] = {
+                    id,
+                    name,
+                    description,
+                    category,
+                    price,
+                    quantity,
+                    variants: []
+                };
+            }
+
+            if (color || sizes || image) {
+                acc[id].variants.push({ color, sizes, image });
+            }
+
+            return acc;
+        }, {});
+
+        // Converting the object back to an array
+        const response = Object.values(merged);
+
+        res.json(response);
     });
 };
 

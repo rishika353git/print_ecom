@@ -91,8 +91,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/product", productsRoutes);
-app.use("/api/accessories-customize", accessoriesCustomizeRoutes);  // Use the customize route only once!
+app.use("/api/accessories-customize", accessoriesCustomizeRoutes);
 app.use("/api/merchandise", merchandiseRoutes);
+
 
 // ✅ Start the server
 const PORT = process.env.PORT || 5000;
