@@ -3,18 +3,37 @@ const path = require("path");
 const fs = require("fs");
 
 
+
+// Function to generate a unique product code
+const generateProductCode = () => {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    let code = "CUAC";
+
+    for (let i = 0; i < 3; i++) {
+        code += letters.charAt(Math.floor(Math.random() * letters.length));
+    }
+    for (let i = 0; i < 3; i++) {
+        code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    }
+
+    return code;
+};
+
 exports.createCustomizeAccessory = (req, res) => {
     console.log("Received Request Body:", req.body);
 
-    const { name, description, category, price, quantity } = req.body;
-    
+    const { name, description, category, price, original_price, quantity } = req.body;
+    const product_code = generateProductCode();
+
+    console.log("Generated Product Code:", product_code);
+
     const images = req.files?.files ? req.files.files.map((file) => file.filename) : [];
 
-    
-    // Handle variants without sizes
     let variants;
     try {
         variants = JSON.parse(req.body.colors || "[]");
+
         if (!Array.isArray(variants) || variants.length === 0) {
             return res.status(400).json({ error: "Variants must be a non-empty array" });
         }
@@ -23,13 +42,12 @@ exports.createCustomizeAccessory = (req, res) => {
         return res.status(400).json({ error: "Invalid JSON format in colors" });
     }
 
-    // Insert product into `accessories_products`
     const sql = `
-        INSERT INTO accessories_products (name, description, category, price, quantity) 
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO accessories_products (product_code, name, description, category, price, original_price, quantity) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
-    db.query(sql, [name, description, category, price, quantity], (err, result) => {
+    db.query(sql, [product_code, name, description, category, price, original_price, quantity], (err, result) => {
         if (err) {
             console.error("Database Error:", err);
             return res.status(500).json({ error: "Database error" });
@@ -37,7 +55,6 @@ exports.createCustomizeAccessory = (req, res) => {
 
         const productId = result.insertId;
 
-        // Insert variants with only colors and images
         const variantSql = `
             INSERT INTO accessories_products_variants (product_id, color, image) 
             VALUES ?
@@ -55,16 +72,13 @@ exports.createCustomizeAccessory = (req, res) => {
                     console.error("Error inserting variants:", err);
                     return res.status(500).json({ error: "Error inserting variants" });
                 }
-                res.json({ message: "Accessory added successfully", productId });
+                res.json({ message: "Accessory added successfully", productId, product_code });
             });
         } else {
-            res.json({ message: "Accessory added successfully", productId });
+            res.json({ message: "Accessory added successfully", productId, product_code });
         }
     });
 };
-
-
-
 
 exports.getCustomizeAccessories = (req, res) => {
     const sql = `
@@ -85,10 +99,12 @@ exports.getCustomizeAccessories = (req, res) => {
             if (!accessories[row.id]) {
                 accessories[row.id] = {
                     id: row.id,
+                    product_code: row.product_code,
                     name: row.name,
                     description: row.description,
                     category: row.category,
                     price: row.price,
+                    original_price: row.original_price,
                     quantity: row.quantity,
                     created_at: row.created_at,
                     variants: []
@@ -107,6 +123,7 @@ exports.getCustomizeAccessories = (req, res) => {
         res.json(Object.values(accessories));
     });
 };
+
 exports.getCustomizeAccessoryById = (req, res) => {
     const { id } = req.params;
     const sql = `
@@ -128,10 +145,12 @@ exports.getCustomizeAccessoryById = (req, res) => {
 
         const accessory = {
             id: results[0].id,
+            product_code: results[0].product_code,
             name: results[0].name,
             description: results[0].description,
             category: results[0].category,
             price: results[0].price,
+            original_price: results[0].original_price,
             quantity: results[0].quantity,
             created_at: results[0].created_at,
             variants: []
@@ -150,6 +169,7 @@ exports.getCustomizeAccessoryById = (req, res) => {
         res.json(accessory);
     });
 };
+
 
 
 exports.updateCustomizeAccessory = (req, res) => {

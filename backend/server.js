@@ -11,10 +11,32 @@ const accessoriesCustomizeRoutes = require("./routes/accessoriesCustomizeRoutes"
 const merchandiseRoutes = require("./routes/merchandiseRoutes");
 const multer = require("multer");
 const path = require("path");
+const bannerRoutes = require('./routes/bannerRoutes');
+const cartRoutes = require("./routes/cartRoutes");
+const db = require("./config/db"); 
+const mergedImageRoutes = require("./routes/uploadMergedImage");
+const uploadRoutes = require("./routes/upload");
+const headlineRoutes = require('./routes/headlineRoutes');
+const couponRoutes = require('./routes/couponRoutes');
+
+
+
+
 
 // ✅ Initialize the app FIRST
 dotenv.config();
 const app = express();
+app.use(express.json());
+app.use('/uploads', express.static('uploads', {
+    setHeaders: (res, path, stat) => {
+      res.set('Access-Control-Allow-Origin', '*');
+    }
+  }));
+  
+app.use(express.static("uploads")); // Serve uploaded images
+
+
+
 
 // ✅ Apply CORS
 app.use(cors({
@@ -26,6 +48,13 @@ app.use(cors({
 // ✅ Use body-parser before routes
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+
+
+app.use("/api", uploadRoutes);
+
+app.use("/api", require("./routes/uploadMergedImage"));  // ✅ No /api in the router file
+
 
 // ✅ Serve static files for uploaded images
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -40,9 +69,10 @@ const storage = multer.diskStorage({
     }
 });
 
+
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: (req, file, cb) => {
         const fileTypes = /jpeg|jpg|png|gif/;
         const mimeType = fileTypes.test(file.mimetype);
@@ -57,26 +87,42 @@ const upload = multer({
 });
 
 
-// ✅ Route for accessories with proper multer handling
-app.post('/api/accessories', upload.fields([
-    { name: 'files', maxCount: 5 },          // Up to 5 'files'
-    { name: 'slide_images', maxCount: 5 }    // Up to 5 'slide_images'
-]), (req, res) => {
-    console.log('Files:', req.files);   // Verify file uploads
-    console.log('Body:', req.body);
+app.post("/api/admin/login", (req, res) => {
+  const { email, password } = req.body;
 
-    const { name, description, category, price, quantity, color } = req.body;
+  // Static admin credentials
+  if (email === "admin@123" && password === "admin") {
+    return res.json({ success: true });
+  }
 
-    const files = req.files['files'] || [];
-    const slideImages = req.files['slide_images'] || [];
-
-    res.status(201).json({
-        message: "Stock added successfully",
-        files: files.map(file => file.filename),
-        slideImages: slideImages.map(file => file.filename)
-    });
+  return res.status(401).json({ success: false, message: "Invalid credentials" });
 });
 
+
+
+app.use("/api/accessories", accessoryRoutes);
+
+
+
+app.post('/upload', upload.single('image'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).send('No file uploaded.');
+    }
+  
+    // Generate a new filename with the original extension
+    const fileExtension = path.extname(req.file.originalname);
+    const newFileName = `combined-image-${Date.now()}${fileExtension}`;
+    const newFilePath = path.join(__dirname, 'uploads', newFileName);
+  
+    // Rename the uploaded file
+    fs.rename(req.file.path, newFilePath, (err) => {
+      if (err) {
+        return res.status(500).send('Error saving file.');
+      }
+      // Return the file path
+      res.json({ fileName: newFileName });
+    });
+  });
 // ✅ Error handling middleware for multer
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
@@ -84,8 +130,8 @@ app.use((err, req, res, next) => {
     }
     next();
 });
+app.use("/api", cartRoutes);
 
-// ✅ Define Routes
 app.use("/api/accessories", accessoryRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", userRoutes);
@@ -93,6 +139,11 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/product", productsRoutes);
 app.use("/api/accessories-customize", accessoriesCustomizeRoutes);
 app.use("/api/merchandise", merchandiseRoutes);
+app.use('/api/banner', bannerRoutes);
+app.use('/api/headlines', headlineRoutes);
+app.use('/api/coupons', couponRoutes);
+
+
 
 
 // ✅ Start the server
@@ -100,3 +151,9 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+
+
+
+
+

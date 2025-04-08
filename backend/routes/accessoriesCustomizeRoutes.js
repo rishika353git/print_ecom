@@ -31,3 +31,5 @@ router.put("/:id", customizeAccessoriesController.updateCustomizeAccessory);
 router.delete("/:id", customizeAccessoriesController.deleteCustomizeAccessory);
 
 module.exports = router;
+
+

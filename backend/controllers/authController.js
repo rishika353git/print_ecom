@@ -1,6 +1,49 @@
 const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client();
+
+exports.googleSignup = async (req, res) => {
+    const { token } = req.body;
+
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: "433149329367-5hfdauqg0d0gpr3pf727i554n26qn120.apps.googleusercontent.com",
+        });
+
+        const payload = ticket.getPayload();
+        const email = payload.email;
+        const fullName = payload.name;
+
+        if (!fullName) {
+            return res.status(400).json({ message: "Full name is required." });
+        }
+
+        db.query("SELECT * FROM users WHERE email = ?", [email], (err, result) => {
+            if (err) return res.status(500).json({ message: "Database error." });
+
+            if (result.length > 0) {
+                return res.status(200).json({ message: "User already exists. Please login." });
+            }
+
+            db.query(
+                "INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)",
+                [fullName, email, ""],
+                (err, result) => {
+                    if (err) return res.status(500).json({ message: "Database insert error." });
+
+                    return res.status(201).json({ message: "User registered with Google successfully!" });
+                }
+            );
+        });
+    } catch (error) {
+        res.status(401).json({ message: "Invalid Google token." });
+    }
+};
+
+
 
 exports.register = async (req, res) => {
     const { fullName, email, password } = req.body;

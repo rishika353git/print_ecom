@@ -2,53 +2,72 @@ const db = require("../config/db");
 const path = require("path");
 const fs = require("fs");
 
+const generateProductCode = () => {
+    const randomStr = Math.random().toString(36).substring(2, 10).toUpperCase(); // Generate a random alphanumeric string
+    return `PROD${randomStr}`; // Prefix with "PROD"
+};
 exports.addProduct = (req, res) => {
-    console.log("Received Request Body:", req.body); // Debugging Line
+    console.log("Received Request Body:", req.body);
 
-    const { description, category, price, quantity } = req.body;
-    const images = req.files?.map((file) => file.filename).join(",") || "";
+    const { description, category, price, original_price, quantity, colorSizes, name } = req.body;
     
-    // Handle image_slider field
-    const imageSlider = req.body.image_slider || "";
+    // Generate product code
+    const productCode = generateProductCode();
+    
+    console.log("Generated Product Code:", productCode);
+
+    console.log("Data Types:");
+    console.log("name:", typeof name);
+    console.log("description:", typeof description);
+    console.log("category:", typeof category);
+    console.log("price:", typeof price);
+    console.log("original_price:", typeof original_price);
+    console.log("quantity:", typeof quantity);
+    console.log("colorSizes:", typeof colorSizes);
+
+    const images = req.files?.map((file) => file.filename).join(",") || "";
+    console.log("req.files:", Array.isArray(req.files) ? "Array" : typeof req.files);
 
     let variants;
     try {
-        variants = JSON.parse(req.body.colorSizes);
-        console.log("Parsed Variants:", variants); // Debugging Line
+        variants = JSON.parse(colorSizes);
+        console.log("Variants:", variants);
+        console.log("variants data type:", typeof variants);
 
         if (!Array.isArray(variants) || variants.length === 0) {
             return res.status(400).json({ error: "Variants must be a non-empty array" });
         }
     } catch (error) {
-        console.error("JSON Parse Error:", error); // Debugging Line
+        console.error("JSON Parse Error:", error);
         return res.status(400).json({ error: "Invalid JSON format in colorSizes" });
     }
 
-    const sql = `
-        INSERT INTO products (description, category, images, image_slider, price, quantity) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    `;
+    // Insert product into the database
+    const sql = `INSERT INTO products (product_code, name, description, category, price, original_price, quantity, images) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.query(sql, [description, category, images, imageSlider, price, quantity], (err, result) => {
+    db.query(sql, [productCode, name, description, category, price, original_price, quantity, images], (err, result) => {
         if (err) {
-            console.error("Database Error:", err);
+            console.error("Database error:", err);
             return res.status(500).json({ error: "Database error" });
         }
 
         const productId = result.insertId;
 
+        // Insert product variants
         const variantSql = `INSERT INTO product_variants (product_id, color, sizes) VALUES ?`;
         const variantValues = variants.map(v => [productId, v.color, JSON.stringify(v.sizes)]);
 
         db.query(variantSql, [variantValues], (err) => {
             if (err) {
-                console.error("Error inserting variants:", err);
+                console.error("Variant Insert Error:", err);
                 return res.status(500).json({ error: "Error inserting variants" });
             }
-            res.json({ message: "Product added successfully", productId });
+
+            res.status(201).json({ message: "Product added successfully", product_code: productCode });
         });
     });
 };
+
 
 
 exports.getAllProducts = (req, res) => {
@@ -58,7 +77,8 @@ exports.getAllProducts = (req, res) => {
             p.description,
             p.category,
             p.images,
-            p.image_slider,
+            p.product_code,
+            p.name,
             p.price,
             p.quantity,
             IFNULL(
@@ -82,16 +102,26 @@ exports.getAllProducts = (req, res) => {
             return res.status(500).json({ error: "Database error" });
         }
 
-        const products = results.map(product => ({
-            ...product,
-            images: product.images ? product.images.split(",") : [],
-            image_slider: product.image_slider,  // Include image_slider in the response
-            variants: product.variants ? JSON.parse(`[${product.variants}]`) : []
-        }));
+        const products = results.map(product => {
+            const formattedProduct = {
+                ...product,
+                images: product.images ? product.images.split(",") : [],
+                variants: product.variants ? JSON.parse(`[${product.variants}]`) : []
+            };
+
+            // Log data types of response fields
+            console.log("Product Data Types:");
+            for (const key in formattedProduct) {
+                console.log(`${key}: ${typeof formattedProduct[key]}`);
+            }
+
+            return formattedProduct;
+        });
 
         res.json({ products });
     });
 };
+
 
 
   
@@ -121,7 +151,7 @@ exports.getProductById = (req, res) => {
             const product = {
                 ...productResult[0],
                 images: productResult[0].images ? productResult[0].images.split(",") : [],
-                image_slider: productResult[0].image_slider,  // Include image_slider
+            
                 variants: variantResult.map(variant => ({
                     color: variant.color,
                     sizes: JSON.parse(variant.sizes)
