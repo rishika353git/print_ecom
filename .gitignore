@@ -23,8 +23,14 @@ yarn-debug.log*
 yarn-error.log*
 
 
+# Node.js
 node_modules/
+npm-debug.log
+.env
+
+# React
 build/
 dist/
-.env
-.DS_Store
+
+# VS Code
+.vscode/
