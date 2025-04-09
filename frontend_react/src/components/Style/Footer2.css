@@ -1,0 +1,96 @@
+
+  
+  .footer2-about {
+    text-align: left;
+  }
+  
+  .footer2-image {
+    width: 50px;
+    height: auto;
+    margin-bottom: 10px;
+  }
+  
+  .footer2-links {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .footer2-links li {
+    margin-bottom: 8px;
+  }
+  
+  .footer2-links a:hover {
+    color: #ffb400;
+  }
+  
+  .footer2-form {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .footer2-form input {
+    flex: 1;
+    background: #1c1f2b;
+    border: none;
+    padding: 10px;
+    color: white;
+  }
+  
+  .footer2-form button {
+    background: #ffb400;
+    border: none;
+    padding: 10px 15px;
+  }
+  
+  .footer2-bottom {
+    margin-top: 20px;
+    border-top: 1px solid #222;
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .footer2-social a {
+    color: white;
+    margin: 0 10px;
+    font-size: 22px;
+    transition: 0.3s;
+  }
+  
+  .footer2 {
+    background-color: #0d0f16;
+    color: white;
+    padding: 40px 0;
+    font-size: 16px; /* Increased font size */
+    font-weight: 500; /* Medium weight */
+    font-family: 'Poppins', sans-serif; /* Changed font family */
+  }
+  
+  .footer2-links a {
+    color: white;
+    text-decoration: none;
+    transition: 0.3s;
+    font-size: 16px;
+    font-weight: 500;
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  .footer2-form input,
+  .footer2-form button {
+    font-size:22px;
+    font-weight: 500;
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  .footer2-bottom {
+    font-size: 22px;
+    font-weight: 500;
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  .footer2-social a {
+    font-size: 22px;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+  }
+  
